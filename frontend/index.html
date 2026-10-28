@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f4f7f5" />
+  <title>ScriptShelf — Python script portal</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="ScriptShelf home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none">
+            <path d="M16 3.5 28 10.4v11.2l-12 6.9-12-6.9V10.4l12-6.9Z" fill="currentColor" opacity=".16"/>
+            <path d="m12.5 12-4 4 4 4m7-8 4 4-4 4m-1.4-10-4.2 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="brand-name">script<span>shelf</span></span>
+      </a>
+      <div class="topbar-tools">
+        <div class="session-menu">
+          <button id="session-button" class="appearance-button" type="button" aria-expanded="false" aria-controls="session-panel">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v8m0 0 3-3m-3 3L7 8m-3 5v3a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-3"/></svg>
+            Sessions
+          </button>
+          <section id="session-panel" class="appearance-panel session-panel" aria-label="Save and load sessions" hidden>
+            <div class="appearance-panel-heading">
+              <div>
+                <p class="section-kicker">YOUR LIBRARY</p>
+                <h2>Save your session</h2>
+              </div>
+              <button id="close-session-button" class="icon-button close-button" type="button" aria-label="Close sessions menu">×</button>
+            </div>
+            <p class="session-description">Back up your script links, colors, pane layout and banner customizations, or restore them in another browser.</p>
+            <button id="export-session-button" class="session-action" type="button">
+              <span class="session-action-icon" aria-hidden="true">↓</span>
+              <span><strong>Save session</strong><small>Download a backup file</small></span>
+            </button>
+            <button id="import-session-button" class="session-action" type="button">
+              <span class="session-action-icon session-upload" aria-hidden="true">↑</span>
+              <span><strong>Load session</strong><small>Merge links from a backup</small></span>
+            </button>
+            <input id="session-file-input" type="file" accept=".json,application/json" hidden />
+          </section>
+        </div>
+        <div class="appearance-menu">
+          <button id="appearance-button" class="appearance-button" type="button" aria-expanded="false" aria-controls="appearance-panel">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5a7.5 7.5 0 1 0 0 15h1.1a1.9 1.9 0 0 0 1.3-3.2 1.4 1.4 0 0 1 1-2.4h.8A3.3 3.3 0 0 0 17.5 8.6C17.5 5.2 14.1 2.5 10 2.5Z"/><circle cx="6.5" cy="8" r=".8"/><circle cx="9.5" cy="5.8" r=".8"/><circle cx="13" cy="7" r=".8"/></svg>
+            Colors
+          </button>
+          <section id="appearance-panel" class="appearance-panel" aria-label="Background colors" hidden>
+            <div class="appearance-panel-heading">
+              <div>
+                <p class="section-kicker">PERSONALIZE</p>
+                <h2>Background colors</h2>
+              </div>
+              <button id="close-appearance-button" class="icon-button close-button" type="button" aria-label="Close color menu">×</button>
+            </div>
+            <label class="color-setting" for="page-background-color">
+              <span><strong>Portal background</strong><small>Change your workspace backdrop</small></span>
+              <input id="page-background-color" type="color" value="#f5f7f5" aria-label="Portal background color" />
+            </label>
+            <label class="color-scheme-setting" for="color-scheme-select">
+              <span><strong>Global color scheme</strong><small>Recolor existing tiles, panes, and portal background</small></span>
+              <select id="color-scheme-select" class="text-input color-scheme-select" aria-label="Global color scheme">
+                <option value="" selected>Choose a palette</option>
+                <option value="sage">Sage garden</option>
+                <option value="ocean">Coastal blue</option>
+                <option value="warm">Warm earth</option>
+                <option value="lavender">Soft lavender</option>
+              </select>
+            </label>
+            <button id="apply-color-scheme" class="button button-secondary color-scheme-apply" type="button">Apply to all items</button>
+            <p class="appearance-hint">Applying a palette replaces existing tile, pane, and portal background colors. You can still customize colors individually afterward.</p>
+            <button id="reset-background-color" class="reset-color-button" type="button">Reset portal background</button>
+          </section>
+        </div>
+        <div class="topbar-note"><span class="status-dot"></span>Your personal script library</div>
+      </div>
+    </header>
+
+    <main>
+      <section class="welcome">
+        <button id="edit-banner-button" class="welcome-settings-button" type="button">Edit banner</button>
+        <div class="welcome-copy">
+          <p class="eyebrow"><span class="eyebrow-line"></span> <span id="welcome-label">PYTHON WORKSPACE</span></p>
+          <h1 id="welcome-title">Your scripts,<br /><span>all in one place.</span></h1>
+        </div>
+      </section>
+
+      <section class="library" aria-labelledby="library-title">
+        <section class="quick-access" aria-labelledby="quick-access-title">
+          <div class="quick-access-heading">
+            <div>
+              <p class="section-kicker">QUICK ACCESS</p>
+              <h2 id="quick-access-title">Top tiles <span id="quick-access-count" class="count-badge">0/5</span></h2>
+            </div>
+            <button id="add-quick-access-button" class="button button-secondary quick-access-add" type="button">Add tile</button>
+          </div>
+          <div id="quick-access-grid" class="quick-access-grid" aria-label="Quick access tiles"></div>
+        </section>
+
+        <div class="library-heading">
+          <div>
+            <p class="section-kicker">THE COLLECTION</p>
+            <h2 id="library-title">Your library <span id="tile-count" class="count-badge">0</span></h2>
+          </div>
+          <button id="add-tile-button" class="button button-primary" type="button">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12M4 10h12" /></svg>
+            Add an item
+          </button>
+        </div>
+
+        <div class="library-toolbar">
+          <div class="search-box">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.8" cy="8.8" r="5.8"/><path d="m13.2 13.2 4 4"/></svg>
+            <input id="search-input" type="search" placeholder="Find a script..." aria-label="Find a script" autocomplete="off" />
+            <kbd>/</kbd>
+          </div>
+          <div class="toolbar-actions">
+            <span class="toolbar-hint">Drag items to move or reorder them. Drag dividers to resize panes.</span>
+            <button id="add-pane-button" class="button button-secondary add-pane-button" type="button">Add pane</button>
+          </div>
+        </div>
+
+        <div id="empty-state" class="empty-state" hidden>
+          <div class="empty-illustration" aria-hidden="true">
+            <span class="empty-spark">✳</span>
+            <span class="empty-folder">📂</span>
+            <span class="empty-plus">+</span>
+          </div>
+          <h3 id="empty-title">A fresh start.</h3>
+          <p id="empty-description">Your favorite scripts deserve a place of their own. Add your first one to get started.</p>
+          <button id="empty-add-button" class="button button-secondary" type="button">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12M4 10h12" /></svg>
+            Create your first item
+          </button>
+        </div>
+        <div id="pane-board" class="pane-board" aria-live="polite"></div>
+      </section>
+      <footer class="page-footer"><span>Made for the way you work.</span><span>ScriptShelf <i>·</i> Your local workspace</span></footer>
+    </main>
+  </div>
+
+  <dialog id="tile-dialog" class="tile-dialog" aria-labelledby="dialog-title">
+    <form id="tile-form">
+      <div class="dialog-heading">
+        <div>
+          <p class="section-kicker">MAKE IT YOURS</p>
+          <h2 id="dialog-title">Add an item</h2>
+        </div>
+        <button id="close-dialog-button" class="icon-button close-button" type="button" aria-label="Close dialog">×</button>
+      </div>
+      <label class="field-label" for="tile-name">Script name <span>Required</span></label>
+      <input id="tile-name" name="name" class="text-input" type="text" maxlength="60" placeholder="e.g. TNS Ping Monitor" required />
+
+      <label class="field-label" for="tile-link">Script link <span>Required</span></label>
+      <input id="tile-link" name="link" class="text-input" type="text" maxlength="2048" placeholder="Paste a URL or script path" required />
+      <p class="field-hint">Web URLs open in your browser; local Windows paths open in VS Code.</p>
+
+      <label class="field-label" for="tile-description">Description <span class="optional-label">Optional</span></label>
+      <textarea id="tile-description" name="description" class="text-input text-area" maxlength="180" rows="3" placeholder="What does this script help you do?"></textarea>
+
+      <label class="field-label color-field-label" for="tile-background-color">Tile background <span class="optional-label">Optional</span></label>
+      <div class="tile-color-control">
+        <input id="tile-background-color" name="backgroundColor" type="color" value="#ffffff" aria-label="Tile background color" />
+        <span>Choose a color for this tile</span>
+      </div>
+
+      <label class="field-label" for="tile-pane">Place in</label>
+      <select id="tile-pane" name="paneId" class="text-input pane-select"></select>
+
+      <fieldset class="icon-field">
+        <legend class="field-label">Pick an icon</legend>
+        <div id="icon-picker" class="icon-picker">
+          <button class="icon-choice is-selected" type="button" data-icon="🐍" aria-label="Python" aria-pressed="true">🐍</button>
+          <button class="icon-choice" type="button" data-icon="⚡" aria-label="Lightning" aria-pressed="false">⚡</button>
+          <button class="icon-choice" type="button" data-icon="📊" aria-label="Chart" aria-pressed="false">📊</button>
+          <button class="icon-choice" type="button" data-icon="📁" aria-label="Folder" aria-pressed="false">📁</button>
+          <button class="icon-choice" type="button" data-icon="🔧" aria-label="Tools" aria-pressed="false">🔧</button>
+          <button class="icon-choice" type="button" data-icon="🌊" aria-label="Wave" aria-pressed="false">🌊</button>
+          <button class="icon-choice" type="button" data-icon="🧪" aria-label="Experiment" aria-pressed="false">🧪</button>
+          <button class="icon-choice" type="button" data-icon="✨" aria-label="Sparkles" aria-pressed="false">✨</button>
+        </div>
+      </fieldset>
+
+      <div class="dialog-actions">
+        <button id="cancel-dialog-button" class="button button-quiet" type="button">Cancel</button>
+        <button id="save-tile-button" class="button button-primary" type="submit">Save tile</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="banner-dialog" class="tile-dialog banner-dialog" aria-labelledby="banner-dialog-title">
+    <form id="banner-form">
+      <div class="dialog-heading">
+        <div>
+          <p class="section-kicker">PERSONALIZE</p>
+          <h2 id="banner-dialog-title">Customize banner</h2>
+        </div>
+        <button id="close-banner-dialog-button" class="icon-button close-button" type="button" aria-label="Close banner settings">×</button>
+      </div>
+      <label class="field-label" for="banner-label">Small label</label>
+      <input id="banner-label" class="text-input" type="text" maxlength="50" required />
+      <label class="field-label" for="banner-title">Heading</label>
+      <textarea id="banner-title" class="text-input text-area" rows="2" maxlength="100" required></textarea>
+
+      <label class="field-label" for="banner-width">Banner width <output id="banner-width-value" for="banner-width">100%</output></label>
+      <input id="banner-width" class="range-input" type="range" min="60" max="100" step="1" />
+      <label class="field-label" for="banner-height">Banner height <output id="banner-height-value" for="banner-height">314 px</output></label>
+      <input id="banner-height" class="range-input" type="range" min="90" max="500" step="2" />
+      <label class="field-label" for="banner-scale">Heading size <output id="banner-scale-value" for="banner-scale">100%</output></label>
+      <input id="banner-scale" class="range-input" type="range" min="75" max="125" step="5" />
+
+      <button id="reset-banner-button" class="reset-color-button" type="button">Reset banner to default</button>
+      <div class="dialog-actions">
+        <button id="cancel-banner-button" class="button button-quiet" type="button">Cancel</button>
+        <button class="button button-primary" type="submit">Save banner</button>
+      </div>
+    </form>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
