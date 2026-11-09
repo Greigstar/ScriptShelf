@@ -100,6 +100,7 @@ function normalizePanes(value) {
       !pane.name.trim() ||
       pane.name.length > 30 ||
       !isHexColor(pane.backgroundColor) ||
+      (pane.minimized !== undefined && typeof pane.minimized !== 'boolean') ||
       typeof pane.width !== 'number' ||
       !Number.isFinite(pane.width) ||
       pane.width <= 0
@@ -111,6 +112,7 @@ function normalizePanes(value) {
       id: pane.id,
       name: pane.name.trim(),
       backgroundColor: pane.backgroundColor,
+      minimized: pane.minimized === true,
       width: pane.width
     };
   });
@@ -676,14 +678,20 @@ function makeVSCodeHref(path) {
 function applyPaneLayout() {
   const columns = [];
   panes.forEach((pane, index) => {
-    columns.push(`minmax(180px, ${pane.width}fr)`);
+    columns.push(pane.minimized ? '52px' : `minmax(180px, ${pane.width}fr)`);
     if (index < panes.length - 1) columns.push('10px');
   });
   paneBoard.style.gridTemplateColumns = columns.join(' ');
   const splitters = paneBoard.querySelectorAll('.pane-splitter');
   splitters.forEach((splitter, index) => {
+    const disabled = panes[index].minimized || panes[index + 1].minimized;
+    splitter.classList.toggle('is-disabled', disabled);
+    splitter.tabIndex = disabled ? -1 : 0;
+    splitter.setAttribute('aria-hidden', String(disabled));
     const pairWidth = panes[index].width + panes[index + 1].width;
-    const minShare = Math.min(getMinimumPaneWidthShare(panes.length), pairWidth / 2);
+    const expandedWeight = panes.reduce((total, pane) => total + (pane.minimized ? 0 : pane.width), 0);
+    const expandedPaneCount = panes.filter(pane => !pane.minimized).length;
+    const minShare = Math.min(getMinimumPaneWidthShare(expandedPaneCount) * expandedWeight, pairWidth / 2);
     splitter.setAttribute('aria-valuemin', String(Math.round(minShare * 100)));
     splitter.setAttribute('aria-valuemax', String(Math.round((pairWidth - minShare) * 100)));
     splitter.setAttribute('aria-valuenow', String(Math.round(panes[index].width * 100)));
@@ -691,6 +699,7 @@ function applyPaneLayout() {
   panes.forEach((pane, index) => {
     const paneElement = paneBoard.querySelector(`[data-pane-id="${pane.id}"]`);
     if (!paneElement) return;
+    paneElement.classList.toggle('is-minimized', pane.minimized);
     paneElement.style.setProperty('--pane-background', pane.backgroundColor);
     paneElement.style.setProperty('--pane-ink', getColorLuminance(pane.backgroundColor) < 0.45 ? '#f3f6f3' : '#293d33');
   });
@@ -765,7 +774,7 @@ function createPane(pane, paneTiles, query) {
   const section = document.createElement('section');
   section.className = 'script-pane';
   section.dataset.paneId = pane.id;
-  section.setAttribute('aria-label', pane.name);
+  section.setAttribute('aria-label', `${pane.name}${pane.minimized ? ', minimized' : ''}`);
   section.style.setProperty('--pane-background', pane.backgroundColor);
   section.style.setProperty('--pane-ink', getColorLuminance(pane.backgroundColor) < 0.45 ? '#f3f6f3' : '#293d33');
 
@@ -789,6 +798,10 @@ function createPane(pane, paneTiles, query) {
     section.setAttribute('aria-label', nextName);
   });
 
+  const minimizedName = document.createElement('span');
+  minimizedName.className = 'pane-minimized-name';
+  minimizedName.textContent = pane.name;
+
   const color = document.createElement('input');
   color.className = 'pane-color-input';
   color.type = 'color';
@@ -808,6 +821,20 @@ function createPane(pane, paneTiles, query) {
   addButton.setAttribute('aria-label', `Add an item to ${pane.name}`);
   addButton.addEventListener('click', () => openTileDialog(null, pane.id));
 
+  const toggleButton = document.createElement('button');
+  toggleButton.className = 'pane-toggle-button';
+  toggleButton.type = 'button';
+  toggleButton.textContent = pane.minimized ? '›' : '−';
+  toggleButton.title = pane.minimized ? 'Restore pane' : 'Minimize pane';
+  toggleButton.setAttribute('aria-label', `${pane.minimized ? 'Restore' : 'Minimize'} ${pane.name}`);
+  toggleButton.setAttribute('aria-controls', `pane-content-${pane.id}`);
+  toggleButton.setAttribute('aria-expanded', String(!pane.minimized));
+  toggleButton.addEventListener('click', () => {
+    const nextPanes = panes.map(item => item.id === pane.id ? { ...item, minimized: !item.minimized } : item);
+    if (!savePanes(nextPanes)) return;
+    paneBoard.querySelector(`[data-pane-id="${pane.id}"] .pane-toggle-button`)?.focus();
+  });
+
   const removeButton = document.createElement('button');
   removeButton.className = 'pane-remove-button';
   removeButton.type = 'button';
@@ -815,10 +842,11 @@ function createPane(pane, paneTiles, query) {
   removeButton.disabled = panes.length <= minPaneCount;
   removeButton.setAttribute('aria-label', `Remove ${pane.name}`);
   removeButton.addEventListener('click', () => removePane(pane.id));
-  header.append(name, color, addButton, removeButton);
+  header.append(name, minimizedName, color, addButton, toggleButton, removeButton);
 
   const grid = document.createElement('div');
   grid.className = 'pane-tile-grid';
+  grid.id = `pane-content-${pane.id}`;
   const matchingTiles = paneTiles.filter(tile =>
     !tile.topRow && `${tile.name} ${tile.description}`.toLowerCase().includes(query)
   );
@@ -850,11 +878,13 @@ function createPaneSplitter(index) {
   });
   splitter.addEventListener('pointermove', event => {
     if (!splitter.hasPointerCapture(event.pointerId) || splitter.dataset.startX === undefined) return;
-    const usableWidth = paneBoard.scrollWidth - (panes.length - 1) * 10;
+    const minimizedWidth = panes.filter(pane => pane.minimized).length * 52;
+    const usableWidth = paneBoard.scrollWidth - minimizedWidth - (panes.length - 1) * 10;
+    const expandedWeight = panes.reduce((total, pane) => total + (pane.minimized ? 0 : pane.width), 0);
     const pairWidth = Number(splitter.dataset.pairWidth);
-    const minShare = Math.min(getMinimumPaneWidthShare(panes.length), pairWidth / 2);
+    const minShare = Math.min(getMinimumPaneWidthShare(panes.filter(pane => !pane.minimized).length) * expandedWeight, pairWidth / 2);
     const startWidth = Number(splitter.dataset.startLeftWidth);
-    const change = (event.clientX - Number(splitter.dataset.startX)) / usableWidth;
+    const change = (event.clientX - Number(splitter.dataset.startX)) / usableWidth * expandedWeight;
     const leftWidth = Math.max(minShare, Math.min(pairWidth - minShare, startWidth + change));
     panes[index].width = leftWidth;
     panes[index + 1].width = pairWidth - leftWidth;
@@ -876,8 +906,9 @@ function createPaneSplitter(index) {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
     event.preventDefault();
     const pairWidth = panes[index].width + panes[index + 1].width;
-    const change = event.key === 'ArrowRight' ? 0.02 : -0.02;
-    const minShare = Math.min(getMinimumPaneWidthShare(panes.length), pairWidth / 2);
+    const expandedWeight = panes.reduce((total, pane) => total + (pane.minimized ? 0 : pane.width), 0);
+    const change = (event.key === 'ArrowRight' ? 0.02 : -0.02) * expandedWeight;
+    const minShare = Math.min(getMinimumPaneWidthShare(panes.filter(pane => !pane.minimized).length) * expandedWeight, pairWidth / 2);
     const leftWidth = Math.max(minShare, Math.min(pairWidth - minShare, panes[index].width + change));
     const nextPanes = panes.map((pane, paneIndex) => {
       if (paneIndex === index) return { ...pane, width: leftWidth };
